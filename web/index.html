@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>清华课程查询 · 2026-2027 秋</title>
+<style>
+  :root { --primary:#6d28d9; --bg:#f5f6fa; --card:#fff; --border:#e3e6ee; --text:#1f2430; --muted:#7a8199; }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:"Segoe UI","Microsoft YaHei",system-ui,sans-serif; background:var(--bg); color:var(--text); }
+  header { background:linear-gradient(135deg,#6d28d9,#9333ea); color:#fff; padding:22px 20px 18px; }
+  header h1 { margin:0; font-size:20px; font-weight:600; }
+  header p { margin:6px 0 0; font-size:13px; opacity:.85; }
+  .wrap { max-width:1080px; margin:0 auto; padding:18px 16px 60px; }
+  .panel { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:16px; box-shadow:0 1px 3px rgba(20,20,50,.05); }
+  .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px; }
+  label { display:block; font-size:12px; color:var(--muted); margin-bottom:4px; }
+  select,input { width:100%; padding:9px 10px; border:1px solid var(--border); border-radius:8px; font-size:14px; background:#fff; }
+  select:focus,input:focus { outline:2px solid #c4b5fd; border-color:var(--primary); }
+  .actions { display:flex; gap:10px; margin-top:14px; flex-wrap:wrap; align-items:center; }
+  button { padding:9px 20px; border:none; border-radius:8px; font-size:14px; cursor:pointer; }
+  .btn-primary { background:var(--primary); color:#fff; }
+  .btn-primary:hover { background:#5b21b6; }
+  .btn-ghost { background:#eef0f6; color:var(--text); }
+  .btn-ghost:hover { background:#e2e5ef; }
+  .btn-export { background:#0e9f6e; color:#fff; }
+  .btn-export:hover { background:#0b7a55; }
+  .stats { margin:14px 2px 10px; font-size:13px; color:var(--muted); }
+  .stats b { color:var(--primary); }
+  table { width:100%; border-collapse:collapse; background:var(--card); border-radius:12px; overflow:hidden; margin-top:6px; font-size:13.5px; }
+  thead th { background:#f0f1f7; text-align:left; padding:10px 12px; font-weight:600; color:#454b5e; white-space:nowrap; position:sticky; top:0; }
+  tbody td { padding:9px 12px; border-top:1px solid var(--border); vertical-align:top; }
+  tbody tr:hover { background:#f8f7ff; }
+  .cn { font-weight:600; }
+  .en { color:var(--muted); font-size:12px; }
+  .slot { display:inline-block; background:#f3e8ff; color:#5b21b6; border-radius:6px; padding:2px 8px; margin:1px 3px 1px 0; font-size:12px; white-space:nowrap; }
+  .num { font-family:Consolas,monospace; font-size:12.5px; color:#374151; white-space:nowrap; }
+  a { color:var(--primary); text-decoration:none; }
+  a:hover { text-decoration:underline; }
+  .empty { text-align:center; color:var(--muted); padding:40px 0; }
+  .table-wrap { max-height:70vh; overflow:auto; border:1px solid var(--border); border-radius:12px; margin-top:6px; }
+  .loading { text-align:center; padding:60px 0; color:var(--muted); }
+  .spinner { width:34px; height:34px; border:3px solid #e5e7f5; border-top-color:var(--primary); border-radius:50%; margin:0 auto 12px; animation:spin 1s linear infinite; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+  @media (max-width:640px) { .num { white-space:normal; } thead th:nth-child(6),tbody td:nth-child(6){display:none;} }
+</style>
+</head>
+<body>
+<header>
+  <h1>清华课程查询</h1>
+  <p id="subtitle">数据加载中…</p>
+</header>
+<div class="wrap">
+  <div class="panel">
+    <div class="grid">
+      <div>
+        <label>学期</label>
+        <select id="f-semester"></select>
+      </div>
+      <div>
+        <label>星期</label>
+        <select id="f-weekday">
+          <option value="">全部</option>
+          <option>星期一</option><option>星期二</option><option>星期三</option>
+          <option>星期四</option><option>星期五</option><option>星期六</option><option>星期日</option>
+          <option value="__tbd__">时间待定</option>
+        </select>
+      </div>
+      <div>
+        <label>节次（可填范围，如 3-4）</label>
+        <input id="f-period" placeholder="如 6 或 3-4">
+      </div>
+      <div>
+        <label>周次</label>
+        <select id="f-weeks">
+          <option value="">全部</option>
+          <option>全周</option><option>前八周</option><option>后八周</option>
+        </select>
+      </div>
+      <div>
+        <label>上课地点（输入关键词匹配）</label>
+        <input id="f-location" list="location-list" placeholder="如 六教 / 明理楼 / 深圳">
+        <datalist id="location-list"></datalist>
+      </div>
+      <div>
+        <label>关键词（课名/教师/课程号）</label>
+        <input id="f-keyword" placeholder="如 数学 / 李稻葵">
+      </div>
+    </div>
+    <div class="actions">
+      <button class="btn-primary" id="btn-search">查询</button>
+      <button class="btn-ghost" id="btn-reset">重置</button>
+      <button class="btn-export" id="btn-export">导出 CSV</button>
+    </div>
+  </div>
+
+  <div class="stats" id="stats"></div>
+  <div class="table-wrap" id="table-wrap" style="display:none">
+    <table>
+      <thead><tr>
+        <th>课程序号</th><th>课程名</th><th>教师</th><th>匹配时段</th><th>地点</th><th>链接</th>
+      </tr></thead>
+      <tbody id="tbody"></tbody>
+    </table>
+  </div>
+  <div class="empty" id="empty" style="display:none">没有符合条件的课程，换个条件试试。</div>
+  <div class="loading" id="loading"><div class="spinner"></div>正在加载课程数据…</div>
+</div>
+
+<script>
+let DATA = null;      // raw json
+let SLOTS = [];       // flat slot rows
+let lastResults = [];
+
+const $ = id => document.getElementById(id);
+
+function parseRange(s) {
+  s = (s || '').replace(/[第节课\s]/g, '');
+  let m = s.match(/^(\d+)-(\d+)$/); if (m) return [+m[1], +m[2]];
+  m = s.match(/^(\d+)$/); if (m) return [+m[1], +m[1]];
+  return null;
+}
+function overlap(a, b) { return a && b && a[1] >= b[0] && b[1] >= a[0]; }
+
+async function load() {
+  const res = await fetch('data.json');
+  DATA = await res.json();
+  SLOTS = DATA.slots;
+  $('subtitle').textContent = `${DATA.semester} · 共 ${DATA.courseCount} 门课 / ${DATA.slotCount} 个时段 · 数据更新于 ${DATA.generated}`;
+  // semester select (single for now, keeps UI consistent with multi-semester extension)
+  $('f-semester').innerHTML = `<option value="">${DATA.semester}</option>`;
+  // location datalist (autocomplete suggestions, free input allowed)
+  const locList = $('location-list');
+  for (const loc of DATA.locations) {
+    const o = document.createElement('option'); o.value = loc; locList.appendChild(o);
+  }
+  $('loading').style.display = 'none';
+  search();
+}
+
+function search() {
+  const wd = $('f-weekday').value;
+  const periodQ = $('f-period').value.trim();
+  const weeks = $('f-weeks').value;
+  const loc = $('f-location').value.trim().toLowerCase();
+  const kw = $('f-keyword').value.trim().toLowerCase();
+  const range = periodQ ? parseRange(periodQ) : null;
+  if (periodQ && !range) { alert('节次格式不正确，请输入如 6 或 3-4'); return; }
+
+  const matched = SLOTS.filter(s => {
+    if (wd === '__tbd__') { if (s.wd) return false; }
+    else if (wd && s.wd !== wd) return false;
+    if (range && !overlap(parseRange(s.p), range)) return false;
+    if (weeks && !(s.wk || '').includes(weeks)) return false;
+    if (loc && !(s.loc || '').toLowerCase().includes(loc)) return false;
+    if (kw) {
+      const hay = (s.cn + ' ' + s.en + ' ' + s.t + ' ' + s.num).toLowerCase();
+      if (!hay.includes(kw)) return false;
+    }
+    return true;
+  });
+
+  // group by course
+  const byCourse = new Map();
+  for (const s of matched) {
+    if (!byCourse.has(s.id)) byCourse.set(s.id, { info: s, slots: [] });
+    byCourse.get(s.id).slots.push(s);
+  }
+  lastResults = [...byCourse.values()].sort((a, b) => a.info.num.localeCompare(b.info.num));
+  render();
+}
+
+function render() {
+  const tbody = $('tbody');
+  tbody.innerHTML = '';
+  $('stats').innerHTML = `匹配 <b>${lastResults.length}</b> 门课程`;
+  const wrap = $('table-wrap'), empty = $('empty');
+  if (!lastResults.length) { wrap.style.display = 'none'; empty.style.display = 'block'; return; }
+  empty.style.display = 'none'; wrap.style.display = 'block';
+  const frag = document.createDocumentFragment();
+  for (const { info, slots } of lastResults) {
+    const tr = document.createElement('tr');
+    const slotHtml = slots.map(s => `<span class="slot">${esc(s.raw)}</span>`).join('');
+    const locs = [...new Set(slots.map(s => s.loc).filter(Boolean))].join('、');
+    tr.innerHTML =
+      `<td class="num">${esc(info.num)}</td>` +
+      `<td><div class="cn">${esc(info.cn) || '<span style="color:#b91c1c">（源站未提供）</span>'}</div><div class="en">${esc(info.en)}</div></td>` +
+      `<td>${esc(info.t)}</td>` +
+      `<td>${slotHtml}</td>` +
+      `<td>${esc(locs)}</td>` +
+      `<td><a href="${info.url}" target="_blank" rel="noopener">详情</a></td>`;
+    frag.appendChild(tr);
+  }
+  tbody.appendChild(frag);
+}
+
+function esc(s) { return (s == null ? '' : String(s)).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
+
+function exportCsv() {
+  if (!lastResults.length) { alert('没有可导出的结果'); return; }
+  const head = ['学期', '课程序号', '课程名', '英文名', '教师', '时段', '地点', '链接'];
+  const rows = [head];
+  for (const { info, slots } of lastResults) {
+    rows.push([DATA.semester, info.num, info.cn, info.en, info.t,
+      slots.map(s => s.raw).join(' | '),
+      [...new Set(slots.map(s => s.loc).filter(Boolean))].join('、'), info.url]);
+  }
+  const csv = '﻿' + rows.map(r => r.map(c => `"${String(c ?? '').replace(/"/g, '""')}"`).join(',')).join('\r\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = '课程查询结果.csv';
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+$('btn-search').addEventListener('click', search);
+$('btn-reset').addEventListener('click', () => {
+  $('f-weekday').value = ''; $('f-period').value = ''; $('f-weeks').value = '';
+  $('f-location').value = ''; $('f-keyword').value = ''; search();
+});
+$('btn-export').addEventListener('click', exportCsv);
+['f-weekday', 'f-weeks'].forEach(id => $(id).addEventListener('change', search));
+['f-period', 'f-keyword', 'f-location'].forEach(id => $(id).addEventListener('input', () => { clearTimeout(window.__t); window.__t = setTimeout(search, 250); }));
+
+load().catch(e => { $('loading').textContent = '数据加载失败：' + e.message + '（请通过本地服务器或 GitHub Pages 访问，勿直接双击 file:// 打开）'; });
+</script>
+</body>
+</html>
