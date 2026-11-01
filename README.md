@@ -58,23 +58,6 @@ cd web; npx serve
 **功能**：按学期 / 星期 / 节次（支持 `3-4` 区间）/ 周次 / 上课地点 / 关键词组合筛选，
 结果可一键导出 CSV。
 
-## 部署到 GitHub Pages（免费在线访问）
-
-1. 在 GitHub 新建一个**公开**仓库（如 `tsinghua-courses`），不要勾选初始化 README。
-2. 推送本目录：
-   ```powershell
-   git remote add origin https://github.com/<你的用户名>/tsinghua-courses.git
-   git push -u origin main
-   ```
-3. 仓库页面 → **Settings → Pages → Build and deployment**：
-   - Source 选 **Deploy from a branch**
-   - Branch 选 **main**，目录选 **/ (root)**，保存。
-4. 等待约 1 分钟，访问 `https://<你的用户名>.github.io/tsinghua-courses/web/`
-   （注意末尾的 `/web/`，因为页面在 web 子目录）。
-
-> 想让网址更短（直接 `.../tsinghua-courses/`）的话，把 `web/` 里的
-> `index.html` 和 `data.json` 移到仓库根目录再推送即可。
-
 ## 重新抓取 / 抓取其他学期
 
 ```powershell
