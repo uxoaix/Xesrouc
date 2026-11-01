@@ -78,8 +78,8 @@
         </select>
       </div>
       <div>
-        <label>上课地点（输入关键词匹配）</label>
-        <input id="f-location" list="location-list" placeholder="如 六教 / 明理楼 / 深圳">
+        <label>上课地点（输入关键词匹配，支持简称如"法图"）</label>
+        <input id="f-location" list="location-list" placeholder="如 六教 / 法图 / 明理楼">
         <datalist id="location-list"></datalist>
       </div>
       <div>
@@ -112,6 +112,30 @@ let DATA = null;      // raw json
 let SLOTS = [];       // flat slot rows
 let lastResults = [];
 
+// 地点别名表：输入常用简称时，同时匹配其全称（子串匹配仍保留）
+const LOC_ALIASES = {
+  '法图': '法律图书馆',
+  '新水': '新水利馆',
+  '旧水': '旧水利馆',
+  '西阶': '西阶梯教室',
+  '建馆': '建筑馆',
+  '蒙楼': '蒙民伟楼',
+  '美院': '美术学院',
+  '北体': '北体育馆',
+  '西操': '西大操场',
+};
+
+// 根据输入扩展地点匹配词（含别名：如"法图"→"法律图书馆"）
+function expandLocTerms(q) {
+  const terms = [q];
+  for (const [alias, target] of Object.entries(LOC_ALIASES)) {
+    if (alias.startsWith(q) || q.startsWith(alias)) {
+      if (!terms.includes(target)) terms.push(target);
+    }
+  }
+  return terms;
+}
+
 const $ = id => document.getElementById(id);
 
 function parseRange(s) {
@@ -143,6 +167,7 @@ function search() {
   const periodQ = $('f-period').value.trim();
   const weeks = $('f-weeks').value;
   const loc = $('f-location').value.trim().toLowerCase();
+  const locTerms = loc ? expandLocTerms(loc) : null;
   const kw = $('f-keyword').value.trim().toLowerCase();
   const range = periodQ ? parseRange(periodQ) : null;
   if (periodQ && !range) { alert('节次格式不正确，请输入如 6 或 3-4'); return; }
@@ -152,7 +177,7 @@ function search() {
     else if (wd && s.wd !== wd) return false;
     if (range && !overlap(parseRange(s.p), range)) return false;
     if (weeks && !(s.wk || '').includes(weeks)) return false;
-    if (loc && !(s.loc || '').toLowerCase().includes(loc)) return false;
+    if (locTerms && !locTerms.some(t => (s.loc || '').toLowerCase().includes(t))) return false;
     if (kw) {
       const hay = (s.cn + ' ' + s.en + ' ' + s.t + ' ' + s.num).toLowerCase();
       if (!hay.includes(kw)) return false;

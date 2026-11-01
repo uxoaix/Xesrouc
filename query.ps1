@@ -69,6 +69,23 @@ function ConvertTo-PeriodRange {
   return $null
 }
 
+# 地点别名表：输入常用简称时，同时匹配其全称
+$LocAliases = @{
+  '法图' = '法律图书馆'; '新水' = '新水利馆'; '旧水' = '旧水利馆'
+  '西阶' = '西阶梯教室'; '建馆' = '建筑馆'; '蒙楼' = '蒙民伟楼'
+  '美院' = '美术学院';   '北体' = '北体育馆'; '西操' = '西大操场'
+}
+$locTerms = @()
+if ($Location) {
+  $locTerms += $Location
+  foreach ($alias in $LocAliases.Keys) {
+    if ($alias.StartsWith($Location) -or $Location.StartsWith($alias)) {
+      $target = $LocAliases[$alias]
+      if ($locTerms -notcontains $target) { $locTerms += $target }
+    }
+  }
+}
+
 $wd = $Weekday -replace '星期', ''
 $filterRange = $null
 if ($Period) {
@@ -87,7 +104,11 @@ $matched = $rows | Where-Object {
     elseif ($slotRange[1] -lt $filterRange[0] -or $filterRange[1] -lt $slotRange[0]) { $ok = $false }
   }
   if ($ok -and $Weeks -and $_.weeks -notlike "*$Weeks*") { $ok = $false }
-  if ($ok -and $Location -and $_.location -notlike "*$Location*") { $ok = $false }
+  if ($ok -and $locTerms.Count -gt 0) {
+    $locHit = $false
+    foreach ($t in $locTerms) { if ($_.location -like "*$t*") { $locHit = $true; break } }
+    if (-not $locHit) { $ok = $false }
+  }
   if ($ok -and $Keyword) {
     $hay = ($_.name_cn, $_.name_en, $_.teachers, $_.course_number) -join ' '
     if ($hay -notlike "*$Keyword*") { $ok = $false }
